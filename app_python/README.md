@@ -56,10 +56,10 @@ docker run -d -p 8080:5000 --name devops-info devops-info-service
 
 ```bash
 # Pull the image
-docker pull [your-dockerhub-username]/devops-info-service:latest
+docker pull can4red/devops-info-service:latest
 
 # Run the container
-docker run -d -p 5000:5000 [your-dockerhub-username]/devops-info-service:latest
+docker run -d -p 5000:5000 can4red/devops-info-service:latest
 ```
 
 ## API Endpoints
