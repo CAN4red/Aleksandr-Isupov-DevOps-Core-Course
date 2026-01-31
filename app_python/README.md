@@ -26,6 +26,8 @@ pip install -r requirements.txt
 
 ## Running the Application
 
+### Local Development
+
 ```bash
 # Default configuration
 python app.py
@@ -35,6 +37,29 @@ PORT=8080 python app.py
 
 # With custom host and port
 HOST=127.0.0.1 PORT=3000 python app.py
+```
+
+### Docker Container
+
+```bash
+# Build the Docker image
+docker build -t devops-info-service .
+
+# Run the container
+docker run -d -p 5000:5000 --name devops-info devops-info-service
+
+# Run with custom port mapping
+docker run -d -p 8080:5000 --name devops-info devops-info-service
+```
+
+### Pull from Docker Hub
+
+```bash
+# Pull the image
+docker pull [your-dockerhub-username]/devops-info-service:latest
+
+# Run the container
+docker run -d -p 5000:5000 [your-dockerhub-username]/devops-info-service:latest
 ```
 
 ## API Endpoints
@@ -107,25 +132,22 @@ Health check for monitoring.
 ```
 app_python/
 ├── app.py              # Main application
+├── Dockerfile          # Docker container configuration
+├── .dockerignore       # Files to exclude from Docker build
 ├── requirements.txt    # Dependencies
 ├── .gitignore         # Git ignore rules
 ├── README.md          # This file
 ├── tests/             # Unit tests (Lab 3)
 │   └── __init__.py
 └── docs/              # Lab documentation
-    ├── LAB01.md       # Lab submission
+    ├── LAB01.md       # Lab 1 submission
+    ├── LAB02.md       # Lab 2 submission (Docker)
     └── screenshots/   # Proof screenshots
 ```
 
 ## Testing
 
 ```bash
-# Test endpoints
 curl http://localhost:5000/
 curl http://localhost:5000/health
-```
-
-```
-
-**Note:** The "Running the Application" section was already present in the previous version, but I've kept it in this minimal version to ensure it's included as required. The README now contains all the essential sections mentioned in the spec: Overview (implied), Prerequisites, Installation, Running the Application, API Endpoints, Configuration, Project Structure, and Testing.
 ```
