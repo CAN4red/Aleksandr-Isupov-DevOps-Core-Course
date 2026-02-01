@@ -99,7 +99,7 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
-    continue-on-error: true # Add this to let other jobs run even if Snyk fails
+    continue-on-error: true
 
     steps:
       - name: Checkout code
