@@ -123,9 +123,10 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --sarif-file-output=snyk.sarif
+          path: app_python
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
-          sarif_file: snyk.sarif
+          sarif_file: app_python/snyk.sarif
