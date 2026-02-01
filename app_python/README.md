@@ -147,7 +147,15 @@ app_python/
 
 ## Testing
 
+### Running Tests Locally
+
 ```bash
-curl http://localhost:5000/
-curl http://localhost:5000/health
+# Run tests
+pytest tests/
+
+# Run with coverage report
+pytest --cov=app tests/
+
+# Run linter
+flake8 app.py
 ```

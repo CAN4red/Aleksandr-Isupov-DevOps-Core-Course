@@ -30,31 +30,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def get_uptime():
     """
     Calculate application uptime.
-    
+
     Returns:
         dict: Uptime in seconds and human-readable format
     """
     delta = datetime.now(timezone.utc) - START_TIME
     seconds = int(delta.total_seconds())
-    
+
     # Calculate human-readable format
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
-    
-    human_readable = f"{hours} hour{'s' if hours != 1 else ''}, {minutes} minute{'s' if minutes != 1 else ''}"
-    
+
+    human_readable = f"""{hours} hour{'s' if hours != 1 else ''}
+    ,{minutes} minute{'s' if minutes != 1 else ''}"""
+
     return {
         'seconds': seconds,
         'human': human_readable
     }
 
+
 def get_system_info():
     """
     Collect comprehensive system information.
-    
+
     Returns:
         dict: System information
     """
@@ -67,19 +70,20 @@ def get_system_info():
         'python_version': platform.python_version()
     }
 
+
 @app.route('/')
 def index():
     """
     Main endpoint - returns comprehensive service and system information.
     """
     logger.info(f"GET / from {request.remote_addr}")
-    
+
     # Get current time in ISO format with timezone
     current_time = datetime.now(timezone.utc)
-    
+
     # Get client IP address
     client_ip = request.remote_addr
-    
+
     response = {
         'service': {
             'name': 'devops-info-service',
@@ -101,12 +105,17 @@ def index():
             'path': request.path
         },
         'endpoints': [
-            {'path': '/', 'method': 'GET', 'description': 'Service information'},
+            {
+                'path': '/',
+                'method': 'GET',
+                'description': 'Service information'
+            },
             {'path': '/health', 'method': 'GET', 'description': 'Health check'}
         ]
     }
-    
+
     return jsonify(response)
+
 
 @app.route('/health')
 def health():
@@ -114,14 +123,15 @@ def health():
     Health check endpoint for monitoring.
     """
     logger.debug(f"GET /health from {request.remote_addr}")
-    
+
     health_status = {
         'status': 'healthy',
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'uptime_seconds': get_uptime()['seconds']
     }
-    
+
     return jsonify(health_status), 200
+
 
 @app.errorhandler(404)
 def not_found(error):
@@ -131,10 +141,15 @@ def not_found(error):
         'error': 'Not Found',
         'message': f'The requested endpoint {request.path} does not exist',
         'available_endpoints': [
-            {'path': '/', 'method': 'GET', 'description': 'Service information'},
+            {
+                'path': '/',
+                'method': 'GET',
+                'description': 'Service information'
+            },
             {'path': '/health', 'method': 'GET', 'description': 'Health check'}
         ]
     }), 404
+
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -145,10 +160,10 @@ def internal_error(error):
         'message': 'An unexpected error occurred. Please try again later.'
     }), 500
 
+
 if __name__ == '__main__':
     logger.info(f"Starting DevOps Info Service on {HOST}:{PORT}")
     logger.info(f"Debug mode: {DEBUG}")
     logger.info(f"Application started at {START_TIME.isoformat()}")
-    
-    # Run the Flask application
+
     app.run(host=HOST, port=PORT, debug=DEBUG)
