@@ -1,5 +1,7 @@
 # DevOps Info Service
 
+[![Python CI/CD Pipeline](https://github.com/CAN4red/Aleksandr-Isupov-DevOps-Core-Course/actions/workflows/python-ci.yml/badge.svg?branch=lab03)](https://github.com/CAN4red/Aleksandr-Isupov-DevOps-Core-Course/actions/workflows/python-ci.yml)
+
 A web application providing system information and health status.
 
 ## Prerequisites
@@ -147,7 +149,15 @@ app_python/
 
 ## Testing
 
+### Running Tests Locally
+
 ```bash
-curl http://localhost:5000/
-curl http://localhost:5000/health
+# Run tests
+pytest tests/
+
+# Run with coverage report
+pytest --cov=app tests/
+
+# Run linter
+flake8 app.py
 ```
