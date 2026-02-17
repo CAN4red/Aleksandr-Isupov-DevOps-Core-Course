@@ -1,0 +1,11 @@
+yc_cloud_id  = "your_cloud_id"
+yc_folder_id = "your_folder_id"
+vm_name           = "can4red"
+vm_username       = "can4red"
+ssh_public_key_path = "~/.ssh/ssh-key-1771345093196.pub"
+instance_cores    = 2
+core_fraction     = 20
+instance_memory   = 2
+disk_size         = 20
+disk_type         = "network-hdd"
+yc_zone = "ru-central1-b"
