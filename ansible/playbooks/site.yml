@@ -1,0 +1,9 @@
+---
+- name: Provision and deploy application
+  hosts: webservers
+  become: yes
+
+  roles:
+    - common
+    - docker
+    - app_deploy
