@@ -1,6 +1,6 @@
 # Ansible Infrastructure Automation
 
-[![Ansible Deploy Python](https://github.com/CAN4red/DevOps-Core-Course/actions/workflows/ansible-deploy.yml/badge.svg)](https://github.com/CAN4red/DevOps-Core-Course/actions/workflows/ansible-deploy.yml)
+[![Ansible Deploy Python](https://github.com/CAN4red/Aleksandr-Isupov-DevOps-Core-Course/actions/workflows/ansible-deploy.yml/badge.svg)](https://github.com/CAN4red/Aleksandr-Isupov-DevOps-Core-Course/actions/workflows/ansible-deploy.yml)
 
 This directory contains Ansible playbooks and roles for provisioning and deploying the DevOps course application.
 
