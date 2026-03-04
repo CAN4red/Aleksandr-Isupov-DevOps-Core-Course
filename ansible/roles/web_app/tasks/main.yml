@@ -1,12 +1,16 @@
 ---
 # Wipe logic runs first (when explicitly requested)
 - name: Include wipe tasks
-  ansible.builtin.include_tasks: wipe.yml
   tags:
     - web_app_wipe
+  ansible.builtin.include_tasks: wipe.yml
 
 # Deployment tasks follow...
 - name: Deploy application with Docker Compose
+  tags:
+    - app_deploy
+    - compose
+    - web_app
   block:
     - name: Create application directory
       ansible.builtin.file:
@@ -40,8 +44,3 @@
     - name: Log docker-compose error
       ansible.builtin.debug:
         var: web_app_compose_result
-
-  tags:
-    - app_deploy
-    - compose
-    - web_app

@@ -1,5 +1,8 @@
 ---
 - name: Install common system packages
+  tags:
+    - packages
+    - common
   block:
     - name: Update apt cache
       ansible.builtin.apt:
@@ -33,7 +36,3 @@
         owner: root
         group: root
         mode: '0644'
-
-  tags:
-    - packages
-    - common

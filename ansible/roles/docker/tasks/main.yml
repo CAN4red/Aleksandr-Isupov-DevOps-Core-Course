@@ -1,5 +1,8 @@
 ---
 - name: Install Docker engine
+  tags:
+    - docker_install
+    - docker
   block:
     - name: Add Docker GPG key
       ansible.builtin.apt_key:
@@ -54,11 +57,10 @@
           - python3-docker
         state: present
 
-  tags:
-    - docker_install
-    - docker
-
 - name: Configure Docker service
+  tags:
+    - docker_config
+    - docker
   block:
     - name: Ensure Docker service is running and enabled
       ansible.builtin.systemd:
@@ -77,7 +79,3 @@
       ansible.builtin.systemd:
         name: docker
         enabled: true
-
-  tags:
-    - docker_config
-    - docker

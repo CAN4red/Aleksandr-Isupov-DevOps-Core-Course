@@ -1,5 +1,8 @@
 ---
 - name: Wipe web application
+  when: web_app_wipe | bool
+  tags:
+    - web_app_wipe
   block:
     - name: Stop and remove containers with docker-compose
       community.docker.docker_compose_v2:
@@ -22,7 +25,3 @@
     - name: Log wipe completion
       ansible.builtin.debug:
         msg: "Application {{ web_app_name }} wiped successfully at {{ ansible_date_time.iso8601 }}"
-
-  when: web_app_wipe | bool
-  tags:
-    - web_app_wipe
