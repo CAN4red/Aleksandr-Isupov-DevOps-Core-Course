@@ -2,22 +2,22 @@
 - name: Install Docker engine
   block:
     - name: Add Docker GPG key
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
         filename: docker
 
     - name: Update apt cache after adding Docker repo
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
 
     - name: Install Docker packages
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -27,26 +27,26 @@
 
   rescue:
     - name: Wait before retrying Docker GPG key addition
-      wait_for:
+      ansible.builtin.wait_for:
         timeout: 10
 
     - name: Retry adding Docker GPG key
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
     - name: Retry adding Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
         filename: docker
 
     - name: Retry updating apt cache
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
 
     - name: Retry installing Docker packages
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -61,22 +61,22 @@
 - name: Configure Docker service
   block:
     - name: Ensure Docker service is running and enabled
-      systemd:
+      ansible.builtin.systemd:
         name: docker
         state: started
-        enabled: yes
+        enabled: true
 
     - name: Add user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ docker_user }}"
         groups: docker
-        append: yes
+        append: true
 
   always:
     - name: Ensure Docker service is enabled
-      systemd:
+      ansible.builtin.systemd:
         name: docker
-        enabled: yes
+        enabled: true
 
   tags:
     - docker_config

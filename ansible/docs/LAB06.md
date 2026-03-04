@@ -12,34 +12,34 @@ The common role was updated to group package installation tasks in a block with 
 - name: Install common system packages
   block:
     - name: Update apt cache
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
         cache_valid_time: 3600
 
     - name: Install common packages
-      apt:
+      ansible.builtin.apt:
         name: "{{ common_packages }}"
         state: present
 
   rescue:
     - name: Handle apt cache update failure
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
         cache_valid_time: 3600
         update_cache_retries: 3
         update_cache_retry_max_delay: 10
 
     - name: Retry package installation
-      apt:
+      ansible.builtin.apt:
         name: "{{ common_packages }}"
         state: present
 
   always:
     - name: Log common role completion
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /tmp/ansible-common-completed.log
         line: "Common role completed at {{ ansible_date_time.iso8601 }}"
-        create: yes
+        create: true
         owner: root
         group: root
         mode: '0644'
@@ -57,7 +57,7 @@ The docker role was refactored to separate installation and configuration tasks 
 - name: Install Docker engine
   block:
     - name: Add Docker GPG key
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
@@ -65,11 +65,11 @@ The docker role was refactored to separate installation and configuration tasks 
 
   rescue:
     - name: Wait before retrying Docker GPG key addition
-      wait_for:
+      ansible.builtin.wait_for:
         timeout: 10
 
     - name: Retry adding Docker GPG key
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
@@ -82,22 +82,22 @@ The docker role was refactored to separate installation and configuration tasks 
 - name: Configure Docker service
   block:
     - name: Ensure Docker service is running and enabled
-      systemd:
+      ansible.builtin.systemd:
         name: docker
         state: started
-        enabled: yes
+        enabled: true
 
     - name: Add user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ docker_user }}"
         groups: docker
-        append: yes
+        append: true
 
   always:
     - name: Ensure Docker service is enabled
-      systemd:
+      ansible.builtin.systemd:
         name: docker
-        enabled: yes
+        enabled: true
 
   tags:
     - docker_config
@@ -266,37 +266,37 @@ I renamed the `app_deploy` role to `web_app` as required. This renaming improves
 I created a Jinja2 template for Docker Compose at `roles/web_app/templates/docker-compose.yml.j2`:
 
 ```yaml
-version: '{{ docker_compose_version | default("3.8") }}'
+version: '{{ web_app_docker_compose_version | default("3.8") }}'
 
 services:
-  {{ app_name }}:
-    image: {{ docker_image }}:{{ docker_tag | default("latest") }}
-    container_name: {{ app_name }}
+  {{ web_app_name }}:
+    image: {{ web_app_docker_image }}:{{ web_app_docker_tag | default("latest") }}
+    container_name: {{ web_app_name }}
     ports:
-      - "{{ app_port }}:{{ app_internal_port | default(app_port) }}"
+      - "{{ web_app_port }}:{{ web_app_internal_port | default(web_app_port) }}"
     environment:
-      {% if app_environment %}
-      {% for key, value in app_environment.items() %}
+      {% if web_app_environment %}
+      {% for key, value in web_app_environment.items() %}
       {{ key }}: {{ value }}
       {% endfor %}
       {% endif %}
-    restart: {{ docker_restart_policy | default("unless-stopped") }}
-    {% if app_networks %}
+    restart: {{ web_app_docker_restart_policy | default("unless-stopped") }}
+    {% if web_app_networks %}
     networks:
-      {% for network in app_networks %}
+      {% for network in web_app_networks %}
       - {{ network }}
       {% endfor %}
     {% endif %}
-    {% if app_volumes %}
+    {% if web_app_volumes %}
     volumes:
-      {% for volume in app_volumes %}
+      {% for volume in web_app_volumes %}
       - {{ volume }}
       {% endfor %}
     {% endif %}
 
-{% if app_networks_defined %}
+{% if web_app_networks_defined %}
 networks:
-  {% for network_name, network_config in app_networks_defined.items() %}
+  {% for network_name, network_config in web_app_networks_defined.items() %}
   {{ network_name }}:
     {% if network_config %}
     {% for key, value in network_config.items() %}
@@ -326,37 +326,37 @@ The web_app role was updated to use Docker Compose for deployment:
 - name: Deploy application with Docker Compose
   block:
     - name: Create application directory
-      file:
-        path: "{{ compose_project_dir | default('/opt/' + app_name) }}"
+      ansible.builtin.file:
+        path: "{{ web_app_compose_project_dir | default('/opt/' + web_app_name) }}"
         state: directory
         owner: root
         group: root
         mode: '0755'
 
     - name: Template docker-compose file
-      template:
+      ansible.builtin.template:
         src: docker-compose.yml.j2
-        dest: "{{ compose_project_dir | default('/opt/' + app_name) }}/docker-compose.yml"
+        dest: "{{ web_app_compose_project_dir | default('/opt/' + web_app_name) }}/docker-compose.yml"
         owner: root
         group: root
         mode: '0644'
 
     - name: Deploy with docker-compose
       community.docker.docker_compose_v2:
-        project_src: "{{ compose_project_dir | default('/opt/' + app_name) }}"
+        project_src: "{{ web_app_compose_project_dir | default('/opt/' + web_app_name) }}"
         state: present
-        pull: yes
-        remove_orphans: yes
-      register: compose_result
+        pull: always
+        remove_orphans: true
+      register: web_app_compose_result
 
   rescue:
     - name: Handle deployment failure
-      debug:
+      ansible.builtin.debug:
         msg: "Application deployment failed at {{ ansible_date_time.iso8601 }}"
 
     - name: Log docker-compose error
-      debug:
-        var: compose_result
+      ansible.builtin.debug:
+        var: web_app_compose_result
 
   tags:
     - app_deploy
@@ -458,25 +458,25 @@ Created `roles/web_app/tasks/wipe.yml`:
   block:
     - name: Stop and remove containers with docker-compose
       community.docker.docker_compose_v2:
-        project_src: "{{ compose_project_dir | default('/opt/' + app_name) }}"
+        project_src: "{{ web_app_compose_project_dir | default('/opt/' + web_app_name) }}"
         state: absent
-      ignore_errors: yes
+      failed_when: false
 
     - name: Remove docker-compose file
-      file:
-        path: "{{ compose_project_dir | default('/opt/' + app_name) }}/docker-compose.yml"
+      ansible.builtin.file:
+        path: "{{ web_app_compose_project_dir | default('/opt/' + web_app_name) }}/docker-compose.yml"
         state: absent
-      ignore_errors: yes
+      failed_when: false
 
     - name: Remove application directory
-      file:
-        path: "{{ compose_project_dir | default('/opt/' + app_name) }}"
+      ansible.builtin.file:
+        path: "{{ web_app_compose_project_dir | default('/opt/' + web_app_name) }}"
         state: absent
-      ignore_errors: yes
+      failed_when: false
 
     - name: Log wipe completion
-      debug:
-        msg: "Application {{ app_name }} wiped successfully at {{ ansible_date_time.iso8601 }}"
+      ansible.builtin.debug:
+        msg: "Application {{ web_app_name }} wiped successfully at {{ ansible_date_time.iso8601 }}"
 
   when: web_app_wipe | bool
   tags:

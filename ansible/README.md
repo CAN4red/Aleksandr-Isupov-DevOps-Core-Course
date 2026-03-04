@@ -68,11 +68,10 @@ dockerhub_username: your_actual_dockerhub_username
 dockerhub_password: your_dockerhub_access_token
 
 # Application configuration
-app_name: devops-app
-docker_image: "{{ dockerhub_username }}/{{ app_name }}"
-docker_image_tag: latest
-app_port: 5000
-app_container_name: "{{ app_name }}"
+web_app_name: devops-app
+web_app_docker_image: "{{ dockerhub_username }}/{{ web_app_name }}"
+web_app_docker_tag: latest
+web_app_port: 8000
 ```
 
 When running playbooks, you'll be prompted for the vault password:
