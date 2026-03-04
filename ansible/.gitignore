@@ -1,0 +1,5 @@
+# Ansible
+*.retry
+.vault_pass
+inventory/*.pyc
+__pycache__/

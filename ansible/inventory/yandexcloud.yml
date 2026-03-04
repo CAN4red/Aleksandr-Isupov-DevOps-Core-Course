@@ -1,0 +1,18 @@
+plugin: yandex.cloud.compute
+auth_kind: oauth
+oauth_token: "{{ lookup('env', 'YC_TOKEN') }}"
+folder_id: "{{ lookup('env', 'YC_FOLDER_ID') }}"
+cloud_id: "{{ lookup('env', 'YC_CLOUD_ID') }}"
+
+# Filter only running instances
+filters:
+  - status == "RUNNING"
+
+# Set connection parameters
+compose:
+  ansible_host: network_interfaces[0].primary_v4_address.one_to_one_nat.address
+  ansible_user: "can4red"
+
+# Create groups
+groups:
+  webservers: "'can4red' in labels.purpose"
