@@ -1,0 +1,47 @@
+---
+# Wipe logic runs first (when explicitly requested)
+- name: Include wipe tasks
+  include_tasks: wipe.yml
+  tags:
+    - web_app_wipe
+
+# Deployment tasks follow...
+- name: Deploy application with Docker Compose
+  block:
+    - name: Create application directory
+      file:
+        path: "{{ compose_project_dir | default('/opt/' + app_name) }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Template docker-compose file
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ compose_project_dir | default('/opt/' + app_name) }}/docker-compose.yml"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Deploy with docker-compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_project_dir | default('/opt/' + app_name) }}"
+        state: present
+        pull: yes
+        remove_orphans: yes
+      register: compose_result
+
+  rescue:
+    - name: Handle deployment failure
+      debug:
+        msg: "Application deployment failed at {{ ansible_date_time.iso8601 }}"
+
+    - name: Log docker-compose error
+      debug:
+        var: compose_result
+
+  tags:
+    - app_deploy
+    - compose
+    - web_app

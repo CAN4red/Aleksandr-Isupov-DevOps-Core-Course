@@ -1,0 +1,39 @@
+version: '{{ docker_compose_version | default("3.8") }}'
+
+services:
+  {{ app_name }}:
+    image: {{ docker_image }}:{{ docker_tag | default("latest") }}
+    container_name: {{ app_name }}
+    ports:
+      - "{{ app_port }}:{{ app_internal_port | default(app_port) }}"
+    environment:
+      {% if app_environment %}
+      {% for key, value in app_environment.items() %}
+      {{ key }}: {{ value }}
+      {% endfor %}
+      {% endif %}
+    restart: {{ docker_restart_policy | default("unless-stopped") }}
+    {% if app_networks %}
+    networks:
+      {% for network in app_networks %}
+      - {{ network }}
+      {% endfor %}
+    {% endif %}
+    {% if app_volumes %}
+    volumes:
+      {% for volume in app_volumes %}
+      - {{ volume }}
+      {% endfor %}
+    {% endif %}
+
+{% if app_networks_defined %}
+networks:
+  {% for network_name, network_config in app_networks_defined.items() %}
+  {{ network_name }}:
+    {% if network_config %}
+    {% for key, value in network_config.items() %}
+    {{ key }}: {{ value }}
+    {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}

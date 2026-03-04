@@ -1,11 +1,7 @@
 ---
-# Docker Hub credentials (encrypted with Ansible Vault)
-# dockerhub_username: your-username
-# dockerhub_password: your-access-token
-
-# Application configuration
+# Application Configuration
 app_name: devops-app
-docker_image: "{{ dockerhub_username }}/devops-info-service"
+docker_image: your_dockerhub_username/devops-info-service
 docker_tag: latest
 app_port: 8000
 app_internal_port: 8000

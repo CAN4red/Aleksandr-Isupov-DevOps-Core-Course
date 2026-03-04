@@ -1,5 +1,7 @@
 # Ansible Infrastructure Automation
 
+[![Ansible Deployment](https://github.com/your-username/your-repo/actions/workflows/ansible-deploy.yml/badge.svg)](https://github.com/your-username/your-repo/actions/workflows/ansible-deploy.yml)
+
 This directory contains Ansible playbooks and roles for provisioning and deploying the DevOps course application.
 
 ## Project Structure
@@ -16,7 +18,7 @@ ansible/
 ├── roles/
 │   ├── common/                # Common system setup
 │   ├── docker/                # Docker installation
-│   └── app_deploy/            # Application deployment
+│   └── web_app/               # Application deployment
 ├── playbooks/
 │   ├── site.yml               # Main playbook
 │   ├── provision.yml          # System provisioning

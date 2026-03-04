@@ -1,10 +1,39 @@
 ---
-- name: Update apt cache
-  apt:
-    update_cache: yes
-    cache_valid_time: 3600
+- name: Install common system packages
+  block:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
 
-- name: Install common packages
-  apt:
-    name: "{{ common_packages }}"
-    state: present
+    - name: Install common packages
+      apt:
+        name: "{{ common_packages }}"
+        state: present
+
+  rescue:
+    - name: Handle apt cache update failure
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+        update_cache_retries: 3
+        update_cache_retry_max_delay: 10
+
+    - name: Retry package installation
+      apt:
+        name: "{{ common_packages }}"
+        state: present
+
+  always:
+    - name: Log common role completion
+      lineinfile:
+        path: /tmp/ansible-common-completed.log
+        line: "Common role completed at {{ ansible_date_time.iso8601 }}"
+        create: yes
+        owner: root
+        group: root
+        mode: '0644'
+
+  tags:
+    - packages
+    - common
