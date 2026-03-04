@@ -679,6 +679,10 @@ Add additional tasks to the wipe block:
 
 ## Task 4: CI/CD (3 pts)
 
+CI/CD workflow passing screenshot
+
+![alt text](pipeline-success.png)
+
 ### Workflow Architecture
 
 I created a GitHub Actions workflow at `.github/workflows/ansible-deploy.yml` that implements:
