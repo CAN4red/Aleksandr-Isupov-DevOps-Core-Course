@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, timezone
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
+from pythonjsonlogger import jsonlogger
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -23,12 +24,29 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 # Application start time (in UTC)
 START_TIME = datetime.now(timezone.utc)
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO if not DEBUG else logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Configure JSON logging
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def add_fields(self, log_record, record, message_dict):
+        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        if not log_record.get('timestamp'):
+            log_record['timestamp'] = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
+        if log_record.get('level'):
+            log_record['level'] = log_record['level'].upper()
+        else:
+            log_record['level'] = record.levelname
+
+# Set up JSON logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO if not DEBUG else logging.DEBUG)
+
+# Create console handler and set formatter
+console_handler = logging.StreamHandler()
+formatter = CustomJsonFormatter('%(timestamp)s %(level)s %(name)s %(message)s')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+# Remove default handlers to avoid duplicate logs
+logger.propagate = False
 
 
 def get_uptime():
@@ -76,13 +94,19 @@ def index():
     """
     Main endpoint - returns comprehensive service and system information.
     """
-    logger.info(f"GET / from {request.remote_addr}")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get('User-Agent', 'unknown')
+    
+    logger.info("Processing main endpoint request", 
+                extra={
+                    'method': request.method,
+                    'path': request.path,
+                    'client_ip': client_ip,
+                    'user_agent': user_agent
+                })
 
     # Get current time in ISO format with timezone
     current_time = datetime.now(timezone.utc)
-
-    # Get client IP address
-    client_ip = request.remote_addr
 
     response = {
         'service': {
@@ -100,7 +124,7 @@ def index():
         },
         'request': {
             'client_ip': client_ip,
-            'user_agent': request.headers.get('User-Agent', 'unknown'),
+            'user_agent': user_agent,
             'method': request.method,
             'path': request.path
         },
@@ -114,6 +138,14 @@ def index():
         ]
     }
 
+    logger.info("Main endpoint request processed successfully",
+                extra={
+                    'method': request.method,
+                    'path': request.path,
+                    'status_code': 200,
+                    'client_ip': client_ip
+                })
+
     return jsonify(response)
 
 
@@ -122,7 +154,14 @@ def health():
     """
     Health check endpoint for monitoring.
     """
-    logger.debug(f"GET /health from {request.remote_addr}")
+    client_ip = request.remote_addr
+    
+    logger.debug("Processing health check request",
+                 extra={
+                     'method': request.method,
+                     'path': request.path,
+                     'client_ip': client_ip
+                 })
 
     health_status = {
         'status': 'healthy',
@@ -130,13 +169,30 @@ def health():
         'uptime_seconds': get_uptime()['seconds']
     }
 
+    logger.debug("Health check request processed successfully",
+                 extra={
+                     'method': request.method,
+                     'path': request.path,
+                     'status_code': 200,
+                     'client_ip': client_ip
+                 })
+
     return jsonify(health_status), 200
 
 
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 Not Found errors."""
-    logger.warning(f"404 Not Found: {request.path}")
+    client_ip = request.remote_addr
+    
+    logger.warning("404 Not Found",
+                   extra={
+                       'method': request.method,
+                       'path': request.path,
+                       'client_ip': client_ip,
+                       'status_code': 404
+                   })
+    
     return jsonify({
         'error': 'Not Found',
         'message': f'The requested endpoint {request.path} does not exist',
@@ -154,7 +210,12 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 Internal Server errors."""
-    logger.error(f"500 Internal Server Error: {str(error)}")
+    logger.error("500 Internal Server Error",
+                 extra={
+                     'error_message': str(error),
+                     'status_code': 500
+                 })
+    
     return jsonify({
         'error': 'Internal Server Error',
         'message': 'An unexpected error occurred. Please try again later.'
@@ -162,8 +223,12 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
-    logger.info(f"Starting DevOps Info Service on {HOST}:{PORT}")
-    logger.info(f"Debug mode: {DEBUG}")
-    logger.info(f"Application started at {START_TIME.isoformat()}")
+    logger.info("Starting DevOps Info Service",
+                extra={
+                    'host': HOST,
+                    'port': PORT,
+                    'debug': DEBUG,
+                    'start_time': START_TIME.isoformat()
+                })
 
     app.run(host=HOST, port=PORT, debug=DEBUG)

@@ -1,0 +1,8 @@
+---
+- name: Deploy Monitoring Stack with Loki, Promtail, and Grafana
+  hosts: all
+  become: yes
+  vars:
+    monitoring_base_dir: "/opt/monitoring"
+  roles:
+    - monitoring
