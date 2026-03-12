@@ -1,0 +1,109 @@
+version: '3.8'
+
+networks:
+  logging:
+    driver: bridge
+
+volumes:
+  loki-data:
+  grafana-data:
+
+services:
+  # Loki - Log storage with TSDB
+  loki:
+    image: grafana/loki:{{ monitoring_loki_version }}
+    ports:
+      - "{{ monitoring_loki_port }}:{{ monitoring_loki_port }}"
+    networks:
+      - logging
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/config.yml
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:{{ monitoring_loki_port }}/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ monitoring_loki_cpu_limit }}'
+          memory: {{ monitoring_loki_memory_limit }}
+        reservations:
+          cpus: '{{ monitoring_loki_cpu_reservation }}'
+          memory: {{ monitoring_loki_memory_reservation }}
+
+  # Promtail - Log collector
+  promtail:
+    image: grafana/promtail:{{ monitoring_promtail_version }}
+    networks:
+      - logging
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ monitoring_promtail_cpu_limit }}'
+          memory: {{ monitoring_promtail_memory_limit }}
+        reservations:
+          cpus: '{{ monitoring_promtail_cpu_reservation }}'
+          memory: {{ monitoring_promtail_memory_reservation }}
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:{{ monitoring_grafana_version }}
+    ports:
+      - "{{ monitoring_grafana_port }}:{{ monitoring_grafana_port }}"
+    networks:
+      - logging
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    depends_on:
+      - loki
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:{{ monitoring_grafana_port }}/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ monitoring_grafana_cpu_limit }}'
+          memory: {{ monitoring_grafana_memory_limit }}
+        reservations:
+          cpus: '{{ monitoring_grafana_cpu_reservation }}'
+          memory: {{ monitoring_grafana_memory_reservation }}
+
+  # Python application from Lab 1
+  app-python:
+    build: 
+      context: ../../app_python
+      dockerfile: Dockerfile
+    image: devops-info-service:latest
+    ports:
+      - "8000:5000"
+    networks:
+      - logging
+    labels:
+      logging: "promtail"
+      app: "devops-python"
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ monitoring_app_cpu_limit }}'
+          memory: {{ monitoring_app_memory_limit }}
+        reservations:
+          cpus: '{{ monitoring_app_cpu_reservation }}'
+          memory: {{ monitoring_app_memory_reservation }}

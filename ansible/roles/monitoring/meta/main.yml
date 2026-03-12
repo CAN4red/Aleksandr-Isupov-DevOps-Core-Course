@@ -1,0 +1,4 @@
+---
+dependencies:
+  - role: docker
+    when: docker_installed is not defined or not docker_installed
