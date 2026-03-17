@@ -1,0 +1,28 @@
+---
+- name: Deploy monitoring stack with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_base_dir }}"
+    state: present
+    pull: true
+  register: deploy_result
+
+- name: Wait for services to be ready
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    method: GET
+    status_code: 200
+    timeout: 5
+  loop:
+    - { name: "Loki", url: "http://localhost:{{ monitoring_loki_port }}/ready" }
+    - { name: "Grafana", url: "http://localhost:{{ monitoring_grafana_port }}/api/health" }
+  loop_control:
+    label: "Waiting for {{ item.name }} to be ready"
+  retries: 30
+  delay: 10
+  register: health_check
+  until: health_check.status == 200
+
+- name: Display deployment result
+  ansible.builtin.debug:
+    msg: "Monitoring stack deployed successfully"
+  when: deploy_result.changed
