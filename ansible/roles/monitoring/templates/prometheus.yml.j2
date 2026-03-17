@@ -1,0 +1,19 @@
+global:
+  scrape_interval: {{ monitoring_prometheus_scrape_interval }}
+  evaluation_interval: {{ monitoring_prometheus_scrape_interval }}
+
+# Storage retention (Prometheus 3.x config-based retention)
+storage:
+  tsdb:
+    retention_time: {{ monitoring_prometheus_retention_time }}
+    retention_size: {{ monitoring_prometheus_retention_size }}
+
+scrape_configs:
+{% for target in monitoring_prometheus_targets %}
+  - job_name: '{{ target.job }}'
+    static_configs:
+      - targets: {{ target.targets | to_json }}
+    {% if target.path is defined %}
+    metrics_path: '{{ target.path }}'
+    {% endif %}
+{% endfor %}

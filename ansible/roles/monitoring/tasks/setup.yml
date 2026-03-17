@@ -8,6 +8,7 @@
     - ""
     - "loki"
     - "promtail"
+    - "prometheus"
     - "docs"
 
 - name: Template Loki configuration file
@@ -20,6 +21,12 @@
   ansible.builtin.template:
     src: promtail-config.yml.j2
     dest: "{{ monitoring_base_dir }}/promtail/config.yml"
+    mode: '0644'
+
+- name: Template Prometheus configuration file
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_base_dir }}/prometheus/prometheus.yml"
     mode: '0644'
 
 - name: Template Docker Compose file
