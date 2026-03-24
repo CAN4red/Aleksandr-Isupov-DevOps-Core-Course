@@ -7,10 +7,13 @@ import os
 import socket
 import platform
 import logging
+import time
 from datetime import datetime, timezone
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 from pythonjsonlogger import jsonlogger
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+import functools
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -48,6 +51,133 @@ logger.addHandler(console_handler)
 # Remove default handlers to avoid duplicate logs
 logger.propagate = False
 
+# =============================================================================
+# Prometheus Metrics - RED Method Implementation
+# =============================================================================
+
+# Counter: Total HTTP requests (R - Rate, E - Errors)
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status']
+)
+
+# Histogram: Request duration (D - Duration)
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint'],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+)
+
+# Gauge: Active requests currently being processed
+http_requests_in_progress = Gauge(
+    'http_requests_in_progress',
+    'HTTP requests currently being processed'
+)
+
+# Counter: Application-specific metrics
+devops_info_endpoint_calls = Counter(
+    'devops_info_endpoint_calls',
+    'DevOps Info Service endpoint calls',
+    ['endpoint']
+)
+
+# Histogram: System info collection time
+devops_info_system_collection_seconds = Histogram(
+    'devops_info_system_collection_seconds',
+    'Time spent collecting system information',
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1)
+)
+
+# Gauge: Application uptime in seconds
+app_uptime_seconds = Gauge(
+    'app_uptime_seconds',
+    'Application uptime in seconds'
+)
+
+
+def track_metrics(f):
+    """Decorator to track HTTP request metrics."""
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        # Track active requests
+        http_requests_in_progress.inc()
+        
+        # Track start time for duration
+        start_time = time.time()
+        
+        # Get endpoint from request
+        endpoint = request.path
+        method = request.method
+        
+        try:
+            # Execute the actual function
+            response = f(*args, **kwargs)
+            
+            # Get status code from response
+            if isinstance(response, tuple):
+                status_code = response[1] if len(response) > 1 else 200
+            else:
+                status_code = 200
+            
+            # Record metrics
+            http_requests_total.labels(
+                method=method,
+                endpoint=endpoint,
+                status=str(status_code)
+            ).inc()
+            
+            # Track endpoint-specific calls
+            devops_info_endpoint_calls.labels(endpoint=endpoint).inc()
+            
+            duration = time.time() - start_time
+            http_request_duration_seconds.labels(
+                method=method,
+                endpoint=endpoint
+            ).observe(duration)
+            
+            return response
+            
+        except Exception as e:
+            # Record error metrics
+            http_requests_total.labels(
+                method=method,
+                endpoint=endpoint,
+                status='500'
+            ).inc()
+            
+            duration = time.time() - start_time
+            http_request_duration_seconds.labels(
+                method=method,
+                endpoint=endpoint
+            ).observe(duration)
+            
+            raise
+            
+        finally:
+            # Decrement active requests
+            http_requests_in_progress.dec()
+    
+    return wrapped
+
+
+def update_uptime():
+    """Update the uptime gauge."""
+    app_uptime_seconds.set(get_uptime()['seconds'])
+
+
+@app.route('/metrics')
+def metrics():
+    """
+    Prometheus metrics endpoint.
+    Returns all metrics in Prometheus exposition format.
+    """
+    # Update dynamic metrics before exposing
+    update_uptime()
+    
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+
 
 def get_uptime():
     """
@@ -63,8 +193,7 @@ def get_uptime():
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
 
-    human_readable = f"""{hours} hour{'s' if hours != 1 else ''}
-    ,{minutes} minute{'s' if minutes != 1 else ''}"""
+    human_readable = f"{hours} hour{'s' if hours != 1 else ''}, {minutes} minute{'s' if minutes != 1 else ''}"
 
     return {
         'seconds': seconds,
@@ -79,7 +208,9 @@ def get_system_info():
     Returns:
         dict: System information
     """
-    return {
+    start_time = time.time()
+    
+    result = {
         'hostname': socket.gethostname(),
         'platform': platform.system(),
         'platform_version': platform.version(),
@@ -87,9 +218,15 @@ def get_system_info():
         'cpu_count': os.cpu_count(),
         'python_version': platform.python_version()
     }
+    
+    # Track system info collection time
+    devops_info_system_collection_seconds.observe(time.time() - start_time)
+    
+    return result
 
 
 @app.route('/')
+@track_metrics
 def index():
     """
     Main endpoint - returns comprehensive service and system information.
@@ -150,6 +287,7 @@ def index():
 
 
 @app.route('/health')
+@track_metrics
 def health():
     """
     Health check endpoint for monitoring.
@@ -192,6 +330,13 @@ def not_found(error):
                        'client_ip': client_ip,
                        'status_code': 404
                    })
+    
+    # Track 404 errors
+    http_requests_total.labels(
+        method=request.method,
+        endpoint=request.path,
+        status='404'
+    ).inc()
     
     return jsonify({
         'error': 'Not Found',

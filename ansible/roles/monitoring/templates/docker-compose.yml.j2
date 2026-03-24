@@ -7,6 +7,7 @@ networks:
 volumes:
   loki-data:
   grafana-data:
+  prometheus-data:
 
 services:
   # Loki - Log storage with TSDB
@@ -66,8 +67,8 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
       - GF_SECURITY_ALLOW_EMBEDDING=true
     depends_on:
       - loki
@@ -86,6 +87,41 @@ services:
           cpus: '{{ monitoring_grafana_cpu_reservation }}'
           memory: {{ monitoring_grafana_memory_reservation }}
 
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:{{ monitoring_prometheus_version }}
+    ports:
+      - "{{ monitoring_prometheus_port }}:{{ monitoring_prometheus_port }}"
+    networks:
+      - logging
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time={{ monitoring_prometheus_retention_time }}'
+      - '--storage.tsdb.retention.size={{ monitoring_prometheus_retention_size }}'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:{{ monitoring_prometheus_port }}/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      - loki
+      - grafana
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ monitoring_prometheus_cpu_limit }}'
+          memory: {{ monitoring_prometheus_memory_limit }}
+        reservations:
+          cpus: '{{ monitoring_prometheus_cpu_reservation }}'
+          memory: {{ monitoring_prometheus_memory_reservation }}
+
   # Python application from Lab 1
   app-python:
     build: 
@@ -99,6 +135,12 @@ services:
     labels:
       logging: "promtail"
       app: "devops-python"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     deploy:
       resources:
         limits:
