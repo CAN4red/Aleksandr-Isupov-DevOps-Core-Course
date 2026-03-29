@@ -1,0 +1,16 @@
+apiVersion: v2
+name: devops-info-service
+description: Helm chart for DevOps Info Service - a Python Flask application
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - python
+  - flask
+  - web
+  - devops
+maintainers:
+  - name: DevOps Student
+    email: student@devops.course
+sources:
+  - https://github.com/devops-course/devops-info-service
