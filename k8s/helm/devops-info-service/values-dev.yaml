@@ -1,0 +1,38 @@
+# Development environment values
+# Override default values for development
+
+replicaCount: 1
+
+image:
+  tag: "latest"
+
+# Relaxed resources for development
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+service:
+  type: NodePort
+  nodePort: 30080
+
+# Faster probe checks for development
+livenessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+# Development-specific settings
+env:
+  - name: PORT
+    value: "5000"
+  - name: HOST
+    value: "0.0.0.0"
+  - name: DEBUG
+    value: "True"

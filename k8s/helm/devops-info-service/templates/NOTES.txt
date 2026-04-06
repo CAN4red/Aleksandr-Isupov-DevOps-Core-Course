@@ -1,0 +1,77 @@
+===============================================================================
+  DevOps Info Service has been deployed successfully!
+===============================================================================
+
+Release Name: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Chart Version: {{ .Chart.Version }}
+App Version: {{ .Chart.AppVersion }}
+
+===============================================================================
+  Service Information
+===============================================================================
+
+Service Type: {{ .Values.service.type }}
+Service Port: {{ .Values.service.port }}
+Target Port: {{ .Values.service.targetPort }}
+{{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
+Node Port: {{ .Values.service.nodePort }}
+{{- end }}
+
+===============================================================================
+  Access Your Application
+===============================================================================
+
+{{- if eq .Values.service.type "NodePort" }}
+To access your application:
+
+1. Get the application URL by running these commands:
+   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "devops-info-service.fullname" . }})
+   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo http://$NODE_IP:$NODE_PORT
+
+2. Or use port-forwarding:
+   kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "devops-info-service.fullname" . }} 8080:{{ .Values.service.port }}
+   Then visit http://localhost:8080
+{{- end }}
+
+===============================================================================
+  Deployment Information
+===============================================================================
+
+Replicas: {{ .Values.replicaCount }}
+Image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+
+===============================================================================
+  Health Checks
+===============================================================================
+
+Liveness Probe: {{ .Values.livenessProbe.httpGet.path }} (delay: {{ .Values.livenessProbe.initialDelaySeconds }}s, period: {{ .Values.livenessProbe.periodSeconds }}s)
+Readiness Probe: {{ .Values.readinessProbe.httpGet.path }} (delay: {{ .Values.readinessProbe.initialDelaySeconds }}s, period: {{ .Values.readinessProbe.periodSeconds }}s)
+
+===============================================================================
+  Useful Commands
+===============================================================================
+
+# Check deployment status
+kubectl get deployments -n {{ .Release.Namespace }}
+
+# Check pods
+kubectl get pods -n {{ .Release.Namespace }}
+
+# View logs
+kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "devops-info-service.name" . }}
+
+# Check service
+kubectl get svc -n {{ .Release.Namespace }}
+
+# Upgrade release
+helm upgrade {{ .Release.Name }} . -n {{ .Release.Namespace }}
+
+# Rollback to previous version
+helm rollback {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+# Uninstall release
+helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+===============================================================================

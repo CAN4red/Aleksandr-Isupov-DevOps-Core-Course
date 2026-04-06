@@ -1,0 +1,69 @@
+# Production environment values
+# Override default values for production
+
+replicaCount: 5
+
+image:
+  tag: "1.0.0"
+  pullPolicy: Always
+
+# Production resources
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 5000
+  nodePort: 30080
+
+# Conservative probe settings for production
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 3
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Production-specific settings
+env:
+  - name: PORT
+    value: "5000"
+  - name: HOST
+    value: "0.0.0.0"
+  - name: DEBUG
+    value: "False"
+
+# Production deployment strategy - ensure availability
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 2
+    maxUnavailable: 0
+
+# Node selector for production nodes
+nodeSelector: {}
+
+# Production tolerations
+tolerations: []
+
+# Production affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: devops-info-service
+        topologyKey: kubernetes.io/hostname
