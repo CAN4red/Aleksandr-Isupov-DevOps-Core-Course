@@ -110,3 +110,32 @@ hooks:
   postInstall:
     enabled: true
     image: busybox:latest
+
+# Secrets configuration
+secrets:
+  enabled: true
+  # Use stringData for plain text (auto-encoded by Kubernetes)
+  # Use 'data' for pre-encoded base64 values
+  data:
+    username: "devops-user"
+    password: "secure-password-123"
+    api-key: "api-key-xyz-789"
+
+# Vault configuration for external secrets
+vault:
+  enabled: false
+  address: "http://vault:8200"
+  role: "devops-info-service"
+  secretsPath: "secret/data/devops-info-service"
+  agent:
+    enabled: true
+    inject: true
+    # Path where secrets will be mounted
+    secretsPath: "/vault/secrets"
+    # Template for rendering secrets
+    template: |
+      {{- with secret "secret/data/devops-info-service" -}}
+      APP_USERNAME={{ .Data.data.username }}
+      APP_PASSWORD={{ .Data.data.password }}
+      API_KEY={{ .Data.data.api_key }}
+      {{- end }}

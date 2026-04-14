@@ -1,7 +1,8 @@
+{{- if .Values.vault.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "devops-info-service.fullname" . }}
+  name: {{ include "devops-info-service.fullname" . }}-vault
   labels:
     {{- include "devops-info-service.labels" . | nindent 4 }}
 spec:
@@ -18,6 +19,19 @@ spec:
     metadata:
       labels:
         {{- include "devops-info-service.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Vault Agent Injector annotations
+        vault.hashicorp.com/agent-inject: "{{ .Values.vault.agent.enabled }}"
+        vault.hashicorp.com/role: "{{ .Values.vault.role }}"
+        vault.hashicorp.com/agent-inject-secret-config: "{{ .Values.vault.secretsPath }}"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "{{ .Values.vault.secretsPath }}" -}}
+          APP_USERNAME={{ .Data.data.username }}
+          APP_PASSWORD={{ .Data.data.password }}
+          API_KEY={{ .Data.data.api_key }}
+          {{- end }}
+        vault.hashicorp.com/agent-pre-populate-only: "false"
+        vault.hashicorp.com/agent-run-as-same-user: "true"
     spec:
       serviceAccountName: {{ include "devops-info-service.serviceAccountName" . }}
       securityContext:
@@ -37,24 +51,13 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-            {{- if .Values.secrets.enabled }}
-            # Inject secrets as environment variables
-            - name: APP_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "devops-info-service.fullname" . }}-secret
-                  key: username
-            - name: APP_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "devops-info-service.fullname" . }}-secret
-                  key: password
-            - name: API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "devops-info-service.fullname" . }}-secret
-                  key: api-key
-            {{- end }}
+            # Environment variables pointing to Vault-injected secrets
+            - name: SECRETS_PATH
+              value: "{{ .Values.vault.agent.secretsPath }}"
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: {{ .Values.vault.agent.secretsPath }}
+              readOnly: true
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbe.httpGet.path }}
@@ -73,6 +76,10 @@ spec:
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: vault-secrets
+          emptyDir:
+            medium: Memory
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -85,3 +92,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
