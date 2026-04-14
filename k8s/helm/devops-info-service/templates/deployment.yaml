@@ -55,6 +55,44 @@ spec:
                   name: {{ include "devops-info-service.fullname" . }}-secret
                   key: api-key
             {{- end }}
+            {{- if .Values.configMap.env.enabled }}
+            # Inject ConfigMap as environment variables
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "devops-info-service.fullname" . }}-env-config
+                  key: APP_ENV
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "devops-info-service.fullname" . }}-env-config
+                  key: LOG_LEVEL
+            - name: APP_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "devops-info-service.fullname" . }}-env-config
+                  key: APP_NAME
+            - name: FEATURE_METRICS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "devops-info-service.fullname" . }}-env-config
+                  key: FEATURE_METRICS
+            {{- end }}
+          envFrom:
+            {{- if .Values.configMap.env.enabled }}
+            - configMapRef:
+                name: {{ include "devops-info-service.fullname" . }}-env-config
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.configMap.file.enabled }}
+            - name: config-volume
+              mountPath: /config
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: data-volume
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbe.httpGet.path }}
@@ -73,6 +111,17 @@ spec:
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.configMap.file.enabled }}
+        - name: config-volume
+          configMap:
+            name: {{ include "devops-info-service.fullname" . }}-file-config
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: {{ include "devops-info-service.fullname" . }}-data
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

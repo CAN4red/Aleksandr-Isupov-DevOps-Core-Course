@@ -139,3 +139,22 @@ vault:
       APP_PASSWORD={{ .Data.data.password }}
       API_KEY={{ .Data.data.api_key }}
       {{- end }}
+
+# ConfigMap configuration
+configMap:
+  file:
+    enabled: true
+  env:
+    enabled: true
+    appEnv: "development"
+    logLevel: "INFO"
+    appName: "devops-info-service"
+    featureMetrics: "true"
+
+# Persistence configuration
+persistence:
+  enabled: true
+  size: 100Mi
+  accessMode: ReadWriteOnce
+  storageClass: ""  # Use default storage class
+  mountPath: /data
