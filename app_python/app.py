@@ -27,6 +27,10 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 # Application start time (in UTC)
 START_TIME = datetime.now(timezone.utc)
 
+# Visit counter file path
+VISITS_FILE = os.getenv('VISITS_FILE', '/data/visits')
+VISITS_COUNT = 0
+
 # Configure JSON logging
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self, log_record, record, message_dict):
@@ -50,6 +54,51 @@ logger.addHandler(console_handler)
 
 # Remove default handlers to avoid duplicate logs
 logger.propagate = False
+
+# =============================================================================
+# Visit Counter Implementation
+# =============================================================================
+
+def load_visits():
+    """Load visit count from file."""
+    global VISITS_COUNT
+    try:
+        if os.path.exists(VISITS_FILE):
+            with open(VISITS_FILE, 'r') as f:
+                VISITS_COUNT = int(f.read().strip())
+                logger.info(f"Loaded visits count: {VISITS_COUNT}")
+        else:
+            VISITS_COUNT = 0
+            logger.info("No visits file found, starting from 0")
+    except (ValueError, IOError) as e:
+        logger.error(f"Error loading visits: {e}")
+        VISITS_COUNT = 0
+    return VISITS_COUNT
+
+def save_visits():
+    """Save visit count to file."""
+    global VISITS_COUNT
+    try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(VISITS_FILE), exist_ok=True)
+        # Atomic write: write to temp file then rename
+        temp_file = VISITS_FILE + '.tmp'
+        with open(temp_file, 'w') as f:
+            f.write(str(VISITS_COUNT))
+        os.replace(temp_file, VISITS_FILE)
+        logger.info(f"Saved visits count: {VISITS_COUNT}")
+    except IOError as e:
+        logger.error(f"Error saving visits: {e}")
+
+def increment_visits():
+    """Increment and return the visit count."""
+    global VISITS_COUNT
+    VISITS_COUNT += 1
+    save_visits()
+    return VISITS_COUNT
+
+# Load visits on startup
+load_visits()
 
 # =============================================================================
 # Prometheus Metrics - RED Method Implementation
@@ -94,6 +143,12 @@ devops_info_system_collection_seconds = Histogram(
 app_uptime_seconds = Gauge(
     'app_uptime_seconds',
     'Application uptime in seconds'
+)
+
+# Gauge: Total visits
+total_visits = Gauge(
+    'total_visits',
+    'Total visits to the service'
 )
 
 
@@ -165,6 +220,7 @@ def track_metrics(f):
 def update_uptime():
     """Update the uptime gauge."""
     app_uptime_seconds.set(get_uptime()['seconds'])
+    total_visits.set(VISITS_COUNT)
 
 
 @app.route('/metrics')
@@ -230,16 +286,21 @@ def get_system_info():
 def index():
     """
     Main endpoint - returns comprehensive service and system information.
+    Increments visit counter on each request.
     """
     client_ip = request.remote_addr
     user_agent = request.headers.get('User-Agent', 'unknown')
+    
+    # Increment visit counter
+    visits = increment_visits()
     
     logger.info("Processing main endpoint request", 
                 extra={
                     'method': request.method,
                     'path': request.path,
                     'client_ip': client_ip,
-                    'user_agent': user_agent
+                    'user_agent': user_agent,
+                    'visits': visits
                 })
 
     # Get current time in ISO format with timezone
@@ -257,7 +318,8 @@ def index():
             'uptime_seconds': get_uptime()['seconds'],
             'uptime_human': get_uptime()['human'],
             'current_time': current_time.isoformat(),
-            'timezone': 'UTC'
+            'timezone': 'UTC',
+            'visits': visits
         },
         'request': {
             'client_ip': client_ip,
@@ -271,7 +333,8 @@ def index():
                 'method': 'GET',
                 'description': 'Service information'
             },
-            {'path': '/health', 'method': 'GET', 'description': 'Health check'}
+            {'path': '/health', 'method': 'GET', 'description': 'Health check'},
+            {'path': '/visits', 'method': 'GET', 'description': 'Visit counter'}
         ]
     }
 
@@ -283,6 +346,45 @@ def index():
                     'client_ip': client_ip
                 })
 
+    return jsonify(response)
+
+
+@app.route('/visits')
+@track_metrics
+def visits():
+    """
+    Visit counter endpoint - returns current visit count.
+    """
+    client_ip = request.remote_addr
+    
+    logger.info("Processing visits endpoint request",
+                extra={
+                    'method': request.method,
+                    'path': request.path,
+                    'client_ip': client_ip
+                })
+    
+    visits_count = increment_visits()
+    
+    response = {
+        'visits': visits_count,
+        'message': 'Total visits to this service',
+        'endpoints': [
+            {'path': '/', 'method': 'GET', 'description': 'Main endpoint'},
+            {'path': '/health', 'method': 'GET', 'description': 'Health check'},
+            {'path': '/visits', 'method': 'GET', 'description': 'Visit counter'}
+        ]
+    }
+    
+    logger.info("Visits endpoint request processed successfully",
+                extra={
+                    'method': request.method,
+                    'path': request.path,
+                    'status_code': 200,
+                    'client_ip': client_ip,
+                    'visits': visits_count
+                })
+    
     return jsonify(response)
 
 
@@ -347,7 +449,8 @@ def not_found(error):
                 'method': 'GET',
                 'description': 'Service information'
             },
-            {'path': '/health', 'method': 'GET', 'description': 'Health check'}
+            {'path': '/health', 'method': 'GET', 'description': 'Health check'},
+            {'path': '/visits', 'method': 'GET', 'description': 'Visit counter'}
         ]
     }), 404
 
@@ -373,7 +476,8 @@ if __name__ == '__main__':
                     'host': HOST,
                     'port': PORT,
                     'debug': DEBUG,
-                    'start_time': START_TIME.isoformat()
+                    'start_time': START_TIME.isoformat(),
+                    'visits_file': VISITS_FILE
                 })
 
     app.run(host=HOST, port=PORT, debug=DEBUG)

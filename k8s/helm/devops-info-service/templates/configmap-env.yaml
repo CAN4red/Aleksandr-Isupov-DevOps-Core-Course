@@ -1,0 +1,13 @@
+{{- if .Values.configMap.env.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "devops-info-service.fullname" . }}-env-config
+  labels:
+    {{- include "devops-info-service.labels" . | nindent 4 }}
+data:
+  APP_ENV: {{ .Values.configMap.env.appEnv | quote }}
+  LOG_LEVEL: {{ .Values.configMap.env.logLevel | quote }}
+  APP_NAME: {{ .Values.configMap.env.appName | quote }}
+  FEATURE_METRICS: {{ .Values.configMap.env.featureMetrics | quote }}
+{{- end }}

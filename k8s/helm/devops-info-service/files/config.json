@@ -1,0 +1,20 @@
+{
+  "application": {
+    "name": "devops-info-service",
+    "version": "1.0.0",
+    "description": "DevOps course info service"
+  },
+  "environment": {
+    "name": "development",
+    "debug": false
+  },
+  "features": {
+    "metrics_enabled": true,
+    "logging_level": "INFO",
+    "visit_tracking": true
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 5000
+  }
+}
