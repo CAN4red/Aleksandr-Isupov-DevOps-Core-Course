@@ -1,0 +1,84 @@
+# Canary rollout configuration
+# Use with: helm install canary-demo k8s/helm/devops-info-service -f k8s/helm/devops-info-service/values-canary.yaml
+
+# Base configuration
+replicaCount: 3
+
+image:
+  repository: a.a.isupov/devops-info-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Argo Rollouts configuration
+rollout:
+  enabled: true           # Enable canary rollout
+  blueGreenEnabled: false # Disable blue-green (mutually exclusive)
+
+# Service configuration
+service:
+  type: NodePort
+  port: 80
+  targetPort: 5000
+  nodePort: 30081  # Different nodePort for canary
+
+# Resource limits
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Environment variables
+env:
+  - name: PORT
+    value: "5000"
+  - name: HOST
+    value: "0.0.0.0"
+  - name: DEBUG
+    value: "False"
+  - name: DEPLOYMENT_TYPE
+    value: "canary"
+
+# Probes
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Security contexts
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Service account
+serviceAccount:
+  create: true
+  name: ""
+
+# Node selector, tolerations, affinity
+nodeSelector: {}
+tolerations: []
+affinity: {}

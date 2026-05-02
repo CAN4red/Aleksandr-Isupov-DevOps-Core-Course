@@ -158,3 +158,22 @@ persistence:
   accessMode: ReadWriteOnce
   storageClass: ""  # Use default storage class
   mountPath: /data
+
+# Argo Rollouts configuration
+rollout:
+  enabled: false  # Enable canary rollout
+  blueGreenEnabled: false  # Enable blue-green rollout (mutually exclusive with canary)
+  # Canary steps configuration
+  canarySteps:
+    - setWeight: 20
+      pause: {}
+    - setWeight: 40
+      pause:
+        duration: 30s
+    - setWeight: 60
+      pause:
+        duration: 30s
+    - setWeight: 80
+      pause:
+        duration: 30s
+    - setWeight: 100
