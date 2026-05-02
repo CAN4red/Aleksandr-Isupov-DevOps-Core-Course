@@ -177,3 +177,14 @@ rollout:
       pause:
         duration: 30s
     - setWeight: 100
+
+# StatefulSet configuration
+statefulset:
+  enabled: false  # Set to true to use StatefulSet instead of Deployment
+  # Update strategy configuration
+  updateStrategy:
+    type: RollingUpdate
+    # rollingUpdate:
+    #   partition: 2  # For partitioned rolling updates
+  # Pod management policy (OrderedReady or Parallel)
+  podManagementPolicy: OrderedReady

@@ -1,4 +1,4 @@
-{{- if .Values.rollout.blueGreenEnabled }}
+{{- if and .Values.rollout.blueGreenEnabled (not .Values.statefulset.enabled) }}
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
