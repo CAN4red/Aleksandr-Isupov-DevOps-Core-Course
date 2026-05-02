@@ -1,0 +1,42 @@
+{{- if .Values.initContainers.waitForService.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "devops-info-service.fullname" . }}-wait-service
+  labels:
+    {{- include "devops-info-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wait-demo
+spec:
+  initContainers:
+    - name: wait-for-service
+      image: busybox:1.36
+      command:
+        - 'sh'
+        - '-c'
+        - |
+          echo "Waiting for service {{ .Values.initContainers.waitForService.serviceName }}..."
+          until nslookup {{ .Values.initContainers.waitForService.serviceName }}; do
+            echo "Service not ready yet, sleeping..."
+            sleep 2
+          done
+          echo "Service is available!"
+  containers:
+    - name: main-app
+      image: nginx:1.25
+      ports:
+        - containerPort: 80
+      command: ['sh', '-c', 'echo "Main container started!" && nginx -g "daemon off;"']
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 80
+        initialDelaySeconds: 5
+        periodSeconds: 5
+      livenessProbe:
+        httpGet:
+          path: /
+          port: 80
+        initialDelaySeconds: 10
+        periodSeconds: 10
+  restartPolicy: Never
+{{- end }}
