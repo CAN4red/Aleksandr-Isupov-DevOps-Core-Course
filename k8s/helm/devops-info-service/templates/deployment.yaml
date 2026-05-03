@@ -23,6 +23,31 @@ spec:
       serviceAccountName: {{ include "devops-info-service.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if or .Values.initContainers.download.enabled .Values.initContainers.waitForService.enabled }}
+      initContainers:
+        {{- if .Values.initContainers.download.enabled }}
+        - name: init-download
+          image: busybox:1.36
+          command: ['sh', '-c', 'wget -O /work-dir/config.json {{ .Values.initContainers.download.url }} && echo "Download complete"']
+          volumeMounts:
+            - name: workdir
+              mountPath: /work-dir
+        {{- end }}
+        {{- if .Values.initContainers.waitForService.enabled }}
+        - name: wait-for-service
+          image: busybox:1.36
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for service {{ .Values.initContainers.waitForService.serviceName }}..."
+              until nslookup {{ .Values.initContainers.waitForService.serviceName }}; do
+                echo "Service not ready yet, sleeping..."
+                sleep 2
+              done
+              echo "Service is available!"
+        {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -122,6 +147,10 @@ spec:
         - name: data-volume
           persistentVolumeClaim:
             claimName: {{ include "devops-info-service.fullname" . }}-data
+        {{- end }}
+        {{- if or .Values.initContainers.download.enabled .Values.initContainers.waitForService.enabled }}
+        - name: workdir
+          emptyDir: {}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

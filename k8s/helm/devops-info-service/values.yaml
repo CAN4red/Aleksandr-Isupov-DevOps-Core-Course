@@ -188,3 +188,14 @@ statefulset:
     #   partition: 2  # For partitioned rolling updates
   # Pod management policy (OrderedReady or Parallel)
   podManagementPolicy: OrderedReady
+
+# Init Containers configuration
+initContainers:
+  # Download init container - downloads a file before main container starts
+  download:
+    enabled: false
+    url: "https://example.com"
+  # Wait-for-service init container - waits for a service to be available
+  waitForService:
+    enabled: false
+    serviceName: "kubernetes.default"
