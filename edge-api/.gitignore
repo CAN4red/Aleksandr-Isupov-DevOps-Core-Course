@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Wrangler
+.wrangler/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build
+dist/
+build/
+
+# Wrangler configuration (keep template, update with real values)
+# wrangler.jsonc should be committed but with placeholder KV IDs
